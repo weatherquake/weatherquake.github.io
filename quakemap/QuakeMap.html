@@ -220,7 +220,6 @@
                     }
 
                     const quakeLatLng = [earthquake.hypocenter.latitude, earthquake.hypocenter.longitude];
-                    const quakePlace = earthquake.hypocenter.name || "震源地";
                     const quakeInfoBox = document.getElementById('info-box');
                     quakeInfoBox.innerHTML = `
                         震源 ${earthquake.hypocenter.name || '不明'}<br>
@@ -256,17 +255,23 @@
                 case "None":
                     return "津波の心配なし";
                 case "Unknown":
-                    return "津波不明";
+                    return "津波の有無は不明です";
                 case "Checking":
-                    return "津波の有無確認中";
+                    return "津波の有無を確認中です";
                 case "Warning":
-                    return "津波予報";
+                    return "津波警報発表中！";
                 default:
-                    return "津波情報が不明";
+                    return "津波情報が不明です";
             }
         }
 
-        fetchObservationPoints();
+        // 3秒ごとに地震データを取得
+        const intervalId = setInterval(fetchObservationPoints, 3000);
+
+        // ページがアンロードされたときにインターバルをクリア
+        window.addEventListener('unload', () => {
+            clearInterval(intervalId);
+        });
 
         document.getElementById('showAll').addEventListener('click', () => {
             map.setView([35.6895, 139.6917], 5);
