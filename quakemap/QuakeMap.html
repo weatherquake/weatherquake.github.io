@@ -36,10 +36,11 @@
             font-size: 36px;
         }
         .fade-in-out {
-            animation: fadeInOut 2.1s infinite;
+            animation: fadeInOut 2.2s infinite;
         }
         @keyframes fadeInOut {
-            0%, 10% { opacity: 1; }
+            0% { opacity: 1; }
+            90.91% { opacity: 0; }
             100% { opacity: 0; }
         }
         .control-buttons {
@@ -229,11 +230,11 @@
                     `;
 
                     if (quakeMarker) {
-                        map.removeLayer(quakeMarker);
+                        quakeMarker.setLatLng(quakeLatLng); // マーカーの位置を更新
+                    } else {
+                        quakeMarker = L.marker(quakeLatLng, { icon: shindoIcons["ep"] }).addTo(map);
+                        quakeMarker._icon.classList.add('fade-in-out'); // アニメーションを追加
                     }
-
-                    quakeMarker = L.marker(quakeLatLng, { icon: shindoIcons["ep"] }).addTo(map);
-                    quakeMarker._icon.classList.add('fade-in-out'); // アニメーションを追加
 
                 } else {
                     console.warn("有効な地震データがありません");
