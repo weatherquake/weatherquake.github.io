@@ -103,11 +103,20 @@
         <button id="showAll">全国表示</button>
         <button id="focusOnPlot">プロット中心</button>
         <button id="focusOnQuake">震源地中心</button>
-        <div class="version-info">Shindo QuakeMap Version0.8</div>
+        <div class="version-info">Shindo QuakeMap Version0.9/div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
+        // JMAPointsのデータをJavaScriptのオブジェクトとして定義
+        var JMAPoints = {
+            "points": [
+                { "name": "Tokyo", "code": "101" },
+                { "name": "Osaka", "code": "102" },
+                // ChatGPTが謎の追加した
+            ]
+        };
+
         var map = L.map('map', {
             zoomControl: false
         }).setView([35.6895, 139.6917], 5);
@@ -146,6 +155,7 @@
         };
 
         var quakeMarker; // グローバル変数として定義
+        var observationMarkers = {}; // 観測地点のマーカーを保持するオブジェクト
 
         async function fetchObservationPoints() {
             try {
@@ -172,9 +182,9 @@
                     const quakeInfoBox = document.getElementById('info-box');
                     quakeInfoBox.innerHTML = `
                         震源 ${earthquake.hypocenter.name || '不明'}<br>
-                        深さ ${earthquake.hypocenter.depth || '不明'}km<br>
-                        規模 M${earthquake.hypocenter.magnitude || '不明'}<br>
-                        <span>${getTsunamiInfo(earthquake.domesticTsunami[0]?.type || "None")}</span>
+                        深さ ${earthquake.hypocenter.depth === -1 ? '不明' : earthquake.hypocenter.depth + 'km'}<br>
+                        規模 ${formatMagnitude(earthquake.hypocenter.magnitude)}<br>
+                        <span>${getTsunamiInfo(earthquake.domesticTsunami)}</span>
                     `;
 
                     if (quakeMarker) {
@@ -184,11 +194,47 @@
                         quakeMarker._icon.classList.add('fade-in-out'); // アニメーションを追加
                     }
 
+                    // 観測点の震度データを取得してプロットする
+                    const observationPoints = quakeWithMaxScale.points;
+                    await plotObservationPoints(observationPoints);
+
                 } else {
                     console.warn("有効な地震データがありません");
                 }
             } catch (error) {
                 console.error("データの取得に失敗しました:", error);
+            }
+        }
+
+        async function plotObservationPoints(observationPoints) {
+            try {
+                const response = await fetch('JMAstations.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const stationsData = await response.json();
+
+                observationPoints.forEach(point => {
+                    const jmaPoint = JMAPoints.points.find(p => p.name === point.addr);
+                    if (jmaPoint) {
+                        const station = stationsData.stations.find(s => s.code === jmaPoint.code);
+                        if (station) {
+                            const { latitude, longitude } = station;
+                            const shindoLevel = point.scale;
+                            const icon = shindoIcons[shindoLevel] || shindoIcons["1"];
+
+                            if (observationMarkers[point.addr]) {
+                                observationMarkers[point.addr].setLatLng([latitude, longitude]);
+                                observationMarkers[point.addr].setIcon(icon);
+                            } else {
+                                const marker = L.marker([latitude, longitude], { icon }).addTo(map);
+                                observationMarkers[point.addr] = marker;
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('観測地点データの読み込みに失敗しました:', error);
             }
         }
 
@@ -204,16 +250,24 @@
                 case "None":
                     return "津波の心配なし";
                 case "Checking":
-                    return "津波情報確認中";
+                    return "確認中";
                 case "NonEffective":
-                    return "若干の海面変動";
+                    return "津波予報";
                 case "Watch":
                     return "津波注意報";
                 case "Warning":
                     return "津波警報";
                 default:
-                    return "津波情報不明";
+                    return "不明";
             }
+        }
+
+        function formatMagnitude(magnitude) {
+            if (magnitude === undefined) {
+                return '不明';
+            }
+            const mag = parseFloat(magnitude);
+            return mag.toFixed(1).endsWith('.0') ? mag.toFixed(1) : mag.toFixed(1);
         }
 
         document.getElementById('showAll').addEventListener('click', function() {
