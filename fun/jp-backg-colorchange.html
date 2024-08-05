@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>日本列島の背景色変更</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+            position: relative;
+        }
+        #background {
+            background-color: #ffffff; /* 初期背景色 */
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            z-index: 1;
+        }
+        #control-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        #color-picker, #opacity-slider {
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div id="background"></div>
+    <div id="map"></div>
+    <div id="control-panel">
+        <label for="color-picker">背景色:</label>
+        <input type="color" id="color-picker" value="#ffffff">
+        <br>
+        <label for="opacity-slider">透明度:</label>
+        <input type="range" id="opacity-slider" min="0" max="100" value="0">
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <script>
+        const map = L.map('map', {
+            center: [35.682839, 139.759455], // 日本の中心に設定
+            zoom: 5,
+            zoomControl: false,
+            attributionControl: false
+        });
+
+        // Prefectures GeoJSONレイヤーを追加
+        fetch('prefectures.geojson')
+            .then(response => response.json())
+            .then(prefecturesGeojson => {
+                L.geoJson(prefecturesGeojson, {
+                    style: function (feature) {
+                        return { color: "#000", weight: 1, fillColor: "#fff", fillOpacity: 1 };
+                    }
+                }).addTo(map);
+            })
+            .catch(error => console.error('Error loading GeoJSON:', error));
+
+        const background = document.getElementById('background');
+        const colorPicker = document.getElementById('color-picker');
+        const opacitySlider = document.getElementById('opacity-slider');
+
+        function updateBackgroundStyle() {
+            const bgColor = colorPicker.value;
+            const opacity = opacitySlider.value / 100;
+            background.style.backgroundColor = bgColor;
+            background.style.opacity = 1 - opacity;
+        }
+
+        colorPicker.addEventListener('input', updateBackgroundStyle);
+        opacitySlider.addEventListener('input', updateBackgroundStyle);
+    </script>
+</body>
+</html>
